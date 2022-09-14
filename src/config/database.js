@@ -1,8 +1,12 @@
 const Sequalize = require('sequelize');
+const config = require('config');
 
-const sequalize = new Sequalize('hoaxify', 'my-user-db', 'my-password-db', {
-    dialect: 'sqlite',
-    storage: './database.sqlite',
+const { database, username, password, dialect, storage, logging } = config.get('database')
+
+const sequalize = new Sequalize(database, username, password, {
+    dialect,
+    storage,
+    logging
 });
 
 module.exports = sequalize;

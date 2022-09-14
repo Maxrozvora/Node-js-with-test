@@ -1,0 +1,10 @@
+{
+    "database": {
+        "database": "hoaxify-test",
+        "username": "my-user-db-test",
+        "password": "my-password-db-test",
+        "dialect": "sqlite",
+        "storage": "memory:",
+        "logging": true
+    }
+}
