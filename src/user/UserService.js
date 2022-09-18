@@ -10,7 +10,12 @@ const save = async ({ username, email, password }) => {
     });
 }
 
+const findByEmail = async email => {
+  return await User.findOne({ where: { email } });
+}
+
 
 module.exports = {
     save,
+    findByEmail,
 }

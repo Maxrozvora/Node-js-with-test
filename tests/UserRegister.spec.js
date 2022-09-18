@@ -79,20 +79,34 @@ describe('User Registration', () => {
     });
 
     it.each`
-    field | expectedMessage
-    ${'username'} | ${'Username cannot be null'}
-    ${'email'} | ${'Email cannot be null'}
-    ${'password'} | ${'Password cannot be null'}
-    `('returns $expectedMessage when $field is null', async ({field, expectedMessage}) => {
+    field         | value               | expectedMessage
+    ${'username'} | ${null}             | ${'Username cannot be null'}
+    ${'username'} | ${'usr'}            | ${'Username must be at least 4 characters long and at most 32 characters long'}
+    ${'username'} | ${'a'.repeat(33)}   | ${'Username must be at least 4 characters long and at most 32 characters long'}
+    ${'email'}    | ${null}             | ${'Email cannot be null'}
+    ${'password'} | ${null}             | ${'Password cannot be null'}
+    ${'password'} | ${'pass'}           | ${'Password must be at least 6 characters long'}
+    ${'password'} | ${'alllovercase'}   | ${'Password must contain at least one uppercase letter and one number'}
+    ${'password'} | ${'ALLUPPERCASE'}   | ${'Password must contain at least one uppercase letter and one number'}
+    ${'password'} | ${'loverand231231'} | ${'Password must contain at least one uppercase letter and one number'}
+    ${'password'} | ${'UPPER2312313'}   | ${'Password must contain at least one uppercase letter and one number'}
+    ${'password'} | ${'123123123223'}   | ${'Password must contain at least one uppercase letter and one number'}
+    `('returns $expectedMessage when $field is $value', async ({field, value, expectedMessage}) => {
         const user = {
             username: 'user1',
             email: 'user1@email.com',
             password: 'P4ssword',
         };
-        const responce = await postUser({ ...user, [field]: null });
+        const responce = await postUser({ ...user, [field]: value });
         const { body } = responce;
         expect(body.validationErrors[field]).toBe(expectedMessage);
     });
 
+    it('returns error when email is not unique', async () => {
+        await User.create({ ...validUser });
+        const responce = await postUser(validUser);
+        const { body } = responce;
+        expect(body.validationErrors.email).toBe('Email already in use');
+    });
 })
 
