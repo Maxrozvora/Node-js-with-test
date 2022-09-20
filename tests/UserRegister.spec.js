@@ -23,8 +23,12 @@ const invalidUser = {
     password: 'P4ssword',
 }
 
-const postUser = async (user) => {
-    return await request(app).post('/api/1.0/users').send(user);
+const postUser = async (user, { language } = {}) => {
+    const agent = request(app).post('/api/1.0/users');
+    if (language) {
+        agent.set('Accept-Language', language);
+    }
+    return await agent.send(user);
 };
 
 describe('User Registration', () => {   
@@ -78,19 +82,27 @@ describe('User Registration', () => {
         expect(Object.keys(body.validationErrors)).toEqual(["username", "email"]);
     });
 
+    const usernameNull = 'Username cannot be null';
+    const usernameSize = 'Username must be at least 4 characters long and at most 32 characters long';
+    const emailNull = 'Email cannot be null';
+    const passwordNull = 'Password cannot be null';
+    const passwordLength = 'Password must be at least 6 characters long';
+    const passwordPattern = 'Password must contain at least one uppercase letter and one number';
+    const emailInUse = 'Email already in use';
+
     it.each`
     field         | value               | expectedMessage
-    ${'username'} | ${null}             | ${'Username cannot be null'}
-    ${'username'} | ${'usr'}            | ${'Username must be at least 4 characters long and at most 32 characters long'}
-    ${'username'} | ${'a'.repeat(33)}   | ${'Username must be at least 4 characters long and at most 32 characters long'}
-    ${'email'}    | ${null}             | ${'Email cannot be null'}
-    ${'password'} | ${null}             | ${'Password cannot be null'}
-    ${'password'} | ${'pass'}           | ${'Password must be at least 6 characters long'}
-    ${'password'} | ${'alllovercase'}   | ${'Password must contain at least one uppercase letter and one number'}
-    ${'password'} | ${'ALLUPPERCASE'}   | ${'Password must contain at least one uppercase letter and one number'}
-    ${'password'} | ${'loverand231231'} | ${'Password must contain at least one uppercase letter and one number'}
-    ${'password'} | ${'UPPER2312313'}   | ${'Password must contain at least one uppercase letter and one number'}
-    ${'password'} | ${'123123123223'}   | ${'Password must contain at least one uppercase letter and one number'}
+    ${'username'} | ${null}             | ${usernameNull}
+    ${'username'} | ${'usr'}            | ${usernameSize}
+    ${'username'} | ${'a'.repeat(33)}   | ${usernameSize}
+    ${'email'}    | ${null}             | ${emailNull}
+    ${'password'} | ${null}             | ${passwordNull}
+    ${'password'} | ${'pass'}           | ${passwordLength}
+    ${'password'} | ${'alllovercase'}   | ${passwordPattern}
+    ${'password'} | ${'ALLUPPERCASE'}   | ${passwordPattern}
+    ${'password'} | ${'loverand231231'} | ${passwordPattern}
+    ${'password'} | ${'UPPER2312313'}   | ${passwordPattern}
+    ${'password'} | ${'123123123223'}   | ${passwordPattern}
     `('returns $expectedMessage when $field is $value', async ({field, value, expectedMessage}) => {
         const user = {
             username: 'user1',
@@ -106,7 +118,54 @@ describe('User Registration', () => {
         await User.create({ ...validUser });
         const responce = await postUser(validUser);
         const { body } = responce;
-        expect(body.validationErrors.email).toBe('Email already in use');
+        expect(body.validationErrors.email).toBe(emailInUse);
+    });
+});
+
+describe('Internaliztion', () => {    
+    const usernameNull = 'Імʼя користувача не може бути порожнім';
+    const usernameSize = 'Імʼя користувача повинно бути не менше 4 символів та не більше 32 символів';
+    const emailNull = 'Імейл не може бути порожнім';
+    const passwordNull = 'Пароль не може бути порожнім';
+    const passwordLength = 'Пароль повинен бути не менше 6 символів';
+    const passwordPattern = 'Пароль повинен містити принаймні одну велику літеру та одну цифру';
+    const emailInUse = 'Імейл вже використовується';
+    const userCreated = 'Користувач створений';
+
+    it.each`
+    field         | value               | expectedMessage
+    ${'username'} | ${null}             | ${usernameNull}
+    ${'username'} | ${'usr'}            | ${usernameSize}
+    ${'username'} | ${'a'.repeat(33)}   | ${usernameSize}
+    ${'email'}    | ${null}             | ${emailNull}
+    ${'password'} | ${null}             | ${passwordNull}
+    ${'password'} | ${'pass'}           | ${passwordLength}
+    ${'password'} | ${'alllovercase'}   | ${passwordPattern}
+    ${'password'} | ${'ALLUPPERCASE'}   | ${passwordPattern}
+    ${'password'} | ${'loverand231231'} | ${passwordPattern}
+    ${'password'} | ${'UPPER2312313'}   | ${passwordPattern}
+    ${'password'} | ${'123123123223'}   | ${passwordPattern}
+    `('returns $expectedMessage when $field is $value when language sets as Ukrainian', async ({field, value, expectedMessage}) => {
+        const user = {
+            username: 'user1',
+            email: 'user1@email.com',
+            password: 'P4ssword',
+        };
+        const responce = await postUser({ ...user, [field]: value }, { language: 'ua' });
+        const { body } = responce;
+        expect(body.validationErrors[field]).toBe(expectedMessage);
+    });
+
+    it('returns error when email is not unique when language sets as Ukrainian', async () => {
+        await User.create({ ...validUser });
+        const responce = await postUser(validUser, { language: 'ua' });
+        const { body } = responce;
+        expect(body.validationErrors.email).toBe(emailInUse);
+    });
+
+    it('It returns 200 OK when sign up request is valid', async () => {
+        const response = await postUser(validUser, { language: 'ua' });
+        expect(response.body.message).toBe(userCreated);
     });
 })
 
