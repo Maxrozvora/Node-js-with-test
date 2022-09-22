@@ -3,6 +3,8 @@ const app = require('../src/app');
 const User = require('../src/user/User');
 const sequalize = require('../src/config/database');
 
+const nodemailerStub = require('nodemailer-stub');
+
 beforeAll(async () => {
     return await sequalize.sync();
 });
@@ -120,6 +122,32 @@ describe('User Registration', () => {
         const { body } = responce;
         expect(body.validationErrors.email).toBe(emailInUse);
     });
+
+    it('create use inactive mode', async() => {
+        await postUser(validUser);
+        const [ user ] = await User.findAll();
+        expect(user.inactive).toBe(true);
+    })
+
+    it('create use inactive mode even the request body contains false', async() => {
+        await postUser({ ...validUser, inactive: false });
+        const [ user ] = await User.findAll();
+        expect(user.inactive).toBe(true);
+    })
+
+    it('create an activationToken for user', async() => {
+        await postUser(validUser);
+        const [ user ] = await User.findAll();
+        expect(user.activationToken).toBeTruthy();
+    })
+
+    it('sends an account activation with activationToken', async () => {
+        await postUser(validUser);
+        const lastMail = nodemailerStub.interactsWithMail.lastMail();
+        expect(lastMail.to[0]).toBe(validUser.email);
+        const [ user ] = await User.findAll();
+        expect(lastMail.content).toContain(user.activationToken);
+    })
 });
 
 describe('Internaliztion', () => {    
