@@ -1,6 +1,11 @@
 const { createTransport } = require('nodemailer');
-const { stubTransport } = require('nodemailer-stub');
 
-const transporter = createTransport(stubTransport);
+const transporter = createTransport({
+    host: 'localhost',
+    port: 2525,
+    tls: {
+        rejectUnauthorized: false
+    }
+});
 
 module.exports = transporter;

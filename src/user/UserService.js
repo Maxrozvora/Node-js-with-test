@@ -15,12 +15,8 @@ const save = async ({ username, email, password }) => {
     const hash = await bcrypt.hash(password, 10);
     const activationToken = await generateActivationToken(16);
     const transaction = await sequalize.transaction();
-    await User.create({
-      username,
-      email,
-      password: hash,
-      activationToken,
-    }, transaction);
+    const user = { username, email, password: hash, activationToken };
+    await User.create(user, { transaction });
     try {      
       await EmailService.sendActivationEmail(email, activationToken);
       await transaction.commit();
