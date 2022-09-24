@@ -6,5 +6,6 @@
 "passwordLength": "Password must be at least 6 characters long",
 "passwordPattern": "Password must contain at least one uppercase letter and one number",
 "emailInUse": "Email already in use",
-"userCreated": "User created"
+"userCreated": "User created",
+"emailFailure": "Failed to deliver email"
 }

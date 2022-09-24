@@ -1,7 +1,9 @@
 const User = require('./User');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const { sendActivationEmail } = require('../email/emailService');
+const EmailService = require('../email/emailService');
+const sequalize = require('../config/database');
+const EmailException = require('../email/EmailException');
 
 
 const generateActivationToken = async (length) => {
@@ -12,13 +14,20 @@ const generateActivationToken = async (length) => {
 const save = async ({ username, email, password }) => {
     const hash = await bcrypt.hash(password, 10);
     const activationToken = await generateActivationToken(16);
+    const transaction = await sequalize.transaction();
     await User.create({
       username,
       email,
       password: hash,
       activationToken,
-    });
-    await sendActivationEmail(email, activationToken);    
+    }, transaction);
+    try {      
+      await EmailService.sendActivationEmail(email, activationToken);
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw new EmailException();
+    }
 }
 
 const findByEmail = async email => {

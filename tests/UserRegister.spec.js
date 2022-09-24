@@ -2,6 +2,7 @@ const request = require('supertest');
 const app = require('../src/app');
 const User = require('../src/user/User');
 const sequalize = require('../src/config/database');
+const EmailService = require('../src/email/emailService');
 
 const nodemailerStub = require('nodemailer-stub');
 
@@ -148,6 +149,41 @@ describe('User Registration', () => {
         const [ user ] = await User.findAll();
         expect(lastMail.content).toContain(user.activationToken);
     })
+
+    it('return 502 Bad Gateway when email service is down', async () => {
+        const mockSendAtivationEmail = await jest
+            .spyOn(EmailService, 'sendActivationEmail')
+            .mockRejectedValue({
+                    message: 'Failed to deliver email'
+                });
+        const responce = await postUser(validUser);
+        mockSendAtivationEmail.mockReset();
+        expect(responce.status).toBe(502);
+    })
+
+    it('return Email failure message when email is fails', async () => {
+        const mockSendAtivationEmail = jest
+            .spyOn(EmailService, 'sendActivationEmail')
+            .mockRejectedValue({
+                message: 'Failed to deliver email'
+            });
+        const responce = await postUser(validUser);
+        mockSendAtivationEmail.mockRestore();
+        expect(responce.body.message).toBe('Failed to deliver email');
+    })
+
+    // it('does not save user to database when activation is fails', async () => {
+    //     const mockSendAtivationEmail = jest
+    //         .spyOn(EmailService, 'sendActivationEmail')
+    //         .mockRejectedValue({
+    //             message: 'Failed to deliver email'
+    //         });
+    //     await postUser(validUser);
+    //     mockSendAtivationEmail.mockRestore();
+    //     const users = await User.findAll();  
+    //     expect(users.length).toBe(0);
+    // })
+
 });
 
 describe('Internaliztion', () => {    
@@ -159,6 +195,7 @@ describe('Internaliztion', () => {
     const passwordPattern = 'Пароль повинен містити принаймні одну велику літеру та одну цифру';
     const emailInUse = 'Імейл вже використовується';
     const userCreated = 'Користувач створений';
+    const emailFailure = 'Помилка відправки імейлу';
 
     it.each`
     field         | value               | expectedMessage
@@ -195,5 +232,16 @@ describe('Internaliztion', () => {
         const response = await postUser(validUser, { language: 'ua' });
         expect(response.body.message).toBe(userCreated);
     });
+
+    it('return Email failure message when email is fails and language is Ukrainian', async () => {
+        const mockSendAtivationEmail = jest
+            .spyOn(EmailService, 'sendActivationEmail')
+            .mockRejectedValue({
+                message: emailFailure
+            });
+        const responce = await postUser(validUser, { language: 'ua' });
+        mockSendAtivationEmail.mockRestore();
+        expect(responce.body.message).toBe(emailFailure);
+    })
 })
 

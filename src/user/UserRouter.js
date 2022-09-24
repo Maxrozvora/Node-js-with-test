@@ -28,8 +28,13 @@ async (req, res) => {
         });
         return res.status(400).send({ validationErrors });
     }
-    await UserService.save(req.body);
-    return res.status(200).send({ message: req.t("userCreated") });
+    try {
+        await UserService.save(req.body);
+        return res.send({ message: req.t("userCreated") });
+    }
+     catch (error) {
+        return res.status(502).send({ message: req.t(error.message) });
+    }
   });
 
 module.exports = router;
